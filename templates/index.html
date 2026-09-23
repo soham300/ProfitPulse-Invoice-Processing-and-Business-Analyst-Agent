@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>InvoiceAI — Smart Invoice Processing Agent</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      fontFamily: { sans: ['Inter', 'ui-sans-serif', 'system-ui'] },
+      animation: {
+        'fade-in': 'fadeIn 0.4s ease-out',
+        'slide-up': 'slideUp 0.4s cubic-bezier(0.16,1,0.3,1)',
+        'pop-in': 'popIn 0.35s cubic-bezier(0.34,1.56,0.64,1)',
+        'float': 'float 6s ease-in-out infinite',
+        'pulse-ring': 'pulseRing 2s ease-out infinite',
+      },
+      keyframes: {
+        fadeIn: { '0%': {opacity:0}, '100%': {opacity:1} },
+        slideUp: { '0%': {opacity:0, transform:'translateY(12px)'}, '100%': {opacity:1, transform:'translateY(0)'} },
+        popIn: { '0%': {opacity:0, transform:'scale(0.9) translateY(20px)'}, '100%': {opacity:1, transform:'scale(1) translateY(0)'} },
+        float: { '0%,100%': {transform:'translateY(0)'}, '50%': {transform:'translateY(-14px)'} },
+        pulseRing: { '0%': {transform:'scale(0.8)', opacity:0.6}, '100%': {transform:'scale(2.2)', opacity:0} },
+      }
+    }
+  }
+}
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { font-family: 'Inter', sans-serif; }
+  body { background: #0b1020; }
+  .glass { background: rgba(255,255,255,0.06); backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,0.08); }
+  .grad-text { background: linear-gradient(135deg,#818cf8,#c084fc,#f472b6); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .scroll-thin::-webkit-scrollbar { width: 6px; }
+  .scroll-thin::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 10px; }
+  .scroll-thin::-webkit-scrollbar-track { background: transparent; }
+  .typing span { display:inline-block; width:7px; height:7px; margin:0 1px; background:#a5b4fc; border-radius:50%; animation: bounce 1.2s infinite; }
+  .typing span:nth-child(2){animation-delay:.2s} .typing span:nth-child(3){animation-delay:.4s}
+  @keyframes bounce { 0%,60%,100%{transform:translateY(0);opacity:.4} 30%{transform:translateY(-6px);opacity:1} }
+  .bg-blobs::before, .bg-blobs::after { content:''; position:fixed; border-radius:50%; filter:blur(90px); z-index:0; }
+  .bg-blobs::before { width:500px;height:500px; background:rgba(129,140,248,0.18); top:-120px; left:-120px; }
+  .bg-blobs::after { width:500px;height:500px; background:rgba(236,72,153,0.14); bottom:-150px; right:-100px; }
+</style>
+</head>
+<body class="bg-blobs text-slate-100 min-h-screen selection:bg-indigo-500/40">
+
+<!-- NAV -->
+<header class="relative z-20">
+  <nav class="max-w-7xl mx-auto px-5 sm:px-8 py-5 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <div class="relative">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-fuchsia-500 flex items-center justify-center shadow-lg shadow-indigo-500/30">
+          <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+        </div>
+      </div>
+      <div>
+        <h1 class="text-lg font-bold leading-none">Invoice<span class="grad-text">AI</span></h1>
+        <p class="text-[11px] text-slate-400 mt-0.5">Smart Processing Agent</p>
+      </div>
+    </div>
+    <div class="hidden md:flex items-center gap-8 text-sm text-slate-300">
+      <a href="#" class="hover:text-white transition">Dashboard</a>
+      <a href="#" class="hover:text-white transition">Documents</a>
+      <a href="#" class="hover:text-white transition">Analytics</a>
+      <span class="flex items-center gap-2 text-emerald-400 text-xs"><span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>Agent Online</span>
+    </div>
+    <div class="w-9 h-9 rounded-full bg-gradient-to-br from-amber-400 to-pink-500 flex items-center justify-center text-sm font-bold">JD</div>
+  </nav>
+</header>
+
+<!-- MAIN -->
+<main class="relative z-10 max-w-7xl mx-auto px-5 sm:px-8 pb-16">
+  <div class="text-center mt-6 mb-10">
+    <h2 class="text-3xl sm:text-4xl font-extrabold tracking-tight">Process invoices <span class="grad-text">effortlessly</span></h2>
+    <p class="text-slate-400 mt-3 max-w-xl mx-auto">Upload your documents, classify them, and let the AI agent guide you through every step with smart interactive questions.</p>
+  </div>
+
+  <div class="grid lg:grid-cols-2 gap-6">
+
+    <!-- LEFT: UPLOAD -->
+    <section class="glass rounded-3xl p-6 sm:p-8 animate-slide-up">
+      <div class="flex items-center gap-3 mb-6">
+        <div class="w-9 h-9 rounded-lg bg-indigo-500/20 flex items-center justify-center">
+          <svg class="w-5 h-5 text-indigo-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M7 16a4 4 0 01-.88-7.9A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
+        </div>
+        <h3 class="text-lg font-semibold">Upload Invoice</h3>
+      </div>
+
+      <!-- Dropzone -->
+      <label id="dropzone" for="fileInput" class="group cursor-pointer flex flex-col items-center justify-center text-center border-2 border-dashed border-white/15 rounded-2xl py-12 px-6 transition hover:border-indigo-400/60 hover:bg-indigo-500/5">
+        <div class="relative mb-4">
+          <span class="absolute inset-0 rounded-full bg-indigo-500/30 animate-pulse-ring"></span>
+          <div class="relative w-16 h-16 rounded-full bg-gradient-to-br from-indigo-500 to-fuchsia-500 flex items-center justify-center shadow-lg shadow-indigo-500/40 group-hover:scale-105 transition">
+            <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v12m0-12l-4 4m4-4l4 4M4 20h16"/></svg>
+          </div>
+        </div>
+        <p class="font-medium text-slate-200">Drag & drop your file here</p>
+        <p class="text-sm text-slate-400 mt-1">or <span class="text-indigo-400 underline">browse files</span></p>
+        <p class="text-xs text-slate-500 mt-3">PDF, PNG, JPG, XLSX — up to 10MB</p>
+        <input id="fileInput" type="file" class="hidden" accept=".pdf,.png,.jpg,.jpeg,.xlsx,.csv"/>
+      </label>
+
+      <!-- File preview -->
+      <div id="filePreview" class="hidden mt-4 flex items-center gap-3 bg-white/5 rounded-xl p-3 border border-white/10 animate-fade-in">
+        <div class="w-10 h-10 rounded-lg bg-emerald-500/20 flex items-center justify-center shrink-0">
+          <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        </div>
+        <div class="min-w-0 flex-1">
+          <p id="fileName" class="text-sm font-medium truncate">document.pdf</p>
+          <p id="fileSize" class="text-xs text-slate-400">0 KB</p>
+        </div>
+        <button id="removeFile" class="text-slate-400 hover:text-rose-400 transition p-1">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <!-- Classification -->
+      <div class="mt-8">
+        <p class="text-sm font-medium text-slate-300 mb-3">This upload pertains to</p>
+        <div class="grid grid-cols-2 gap-4">
+          <button data-type="sales" class="type-btn group relative overflow-hidden rounded-2xl p-5 text-left border border-white/10 bg-white/5 transition hover:border-emerald-400/50">
+            <div class="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center mb-3">
+              <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
+            </div>
+            <p class="font-semibold">Sales</p>
+            <p class="text-xs text-slate-400 mt-1">Money coming in</p>
+            <span class="check absolute top-3 right-3 opacity-0 transition"><svg class="w-5 h-5 text-emerald-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.7 5.3a1 1 0 010 1.4l-8 8a1 1 0 01-1.4 0l-4-4a1 1 0 011.4-1.4L8 12.6l7.3-7.3a1 1 0 011.4 0z" clip-rule="evenodd"/></svg></span>
+          </button>
+          <button data-type="purchase" class="type-btn group relative overflow-hidden rounded-2xl p-5 text-left border border-white/10 bg-white/5 transition hover:border-sky-400/50">
+            <div class="w-10 h-10 rounded-xl bg-sky-500/20 flex items-center justify-center mb-3">
+              <svg class="w-5 h-5 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11 17l-4-4m0 0l4-4m-4 4h18M3 5v14"/></svg>
+            </div>
+            <p class="font-semibold">Purchase</p>
+            <p class="text-xs text-slate-400 mt-1">Money going out</p>
+            <span class="check absolute top-3 right-3 opacity-0 transition"><svg class="w-5 h-5 text-sky-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.7 5.3a1 1 0 010 1.4l-8 8a1 1 0 01-1.4 0l-4-4a1 1 0 011.4-1.4L8 12.6l7.3-7.3a1 1 0 011.4 0z" clip-rule="evenodd"/></svg></span>
+          </button>
+        </div>
+      </div>
+
+      <button id="processBtn" class="mt-8 w-full py-3.5 rounded-2xl font-semibold text-white bg-gradient-to-r from-indigo-500 to-fuchsia-500 shadow-lg shadow-indigo-500/30 transition hover:shadow-fuchsia-500/40 hover:-translate-y-0.5 disabled:opacity-40 disabled:cursor-not-allowed disabled:translate-y-0" disabled>
+        Process with AI Agent
+      </button>
+    </section>
+
+    <!-- RIGHT: CHATBOT -->
+    <section class="glass rounded-3xl flex flex-col animate-slide-up overflow-hidden" style="animation-delay:.1s;">
+      <!-- Chat header -->
+      <div class="flex items-center gap-3 p-5 border-b border-white/10">
+        <div class="relative">
+          <div class="w-11 h-11 rounded-full bg-gradient-to-br from-indigo-500 to-fuchsia-500 flex items-center justify-center">
+            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 4v-4z"/></svg>
+          </div>
+          <span class="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-emerald-400 border-2 border-[#131a30]"></span>
+        </div>
+        <div class="flex-1">
+          <p class="font-semibold leading-tight">AI Assistant</p>
+          <p class="text-xs text-emerald-400">Active now</p>
+        </div>
+      </div>
+
+      <!-- Messages -->
+      <div id="chatBody" class="flex-1 overflow-y-auto scroll-thin p-5 space-y-4 min-h-[360px] max-h-[520px]"></div>
+
+      <!-- Input -->
+      <div class="p-4 border-t border-white/10">
+        <form id="chatForm" class="flex items-center gap-2">
+          <input id="chatInput" type="text" placeholder="Ask about your invoices..." autocomplete="off"
+            class="flex-1 bg-white/5 border border-white/10 rounded-full px-5 py-3 text-sm placeholder-slate-500 focus:outline-none focus:border-indigo-400/60 focus:ring-2 focus:ring-indigo-500/20 transition text-white"/>
+          <button type="submit" class="w-11 h-11 shrink-0 rounded-full bg-gradient-to-br from-indigo-500 to-fuchsia-500 flex items-center justify-center shadow-lg shadow-indigo-500/30 hover:scale-105 active:scale-95 transition">
+            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 19l9-7-9-7v14zM3 12h9"/></svg>
+          </button>
+        </form>
+      </div>
+    </section>
+  </div>
+</main>
+
+<!-- MULTIPLE CHOICE POPUP MODAL -->
+<div id="mcOverlay" class="fixed inset-0 z-50 hidden items-center justify-center px-4 bg-black/60 backdrop-blur-sm">
+  <div id="mcCard" class="glass rounded-3xl max-w-md w-full p-7 animate-pop-in relative">
+    <div class="flex items-center gap-3 mb-1">
+      <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-fuchsia-500 flex items-center justify-center shrink-0">
+        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+      </div>
+      <p class="text-xs uppercase tracking-wider text-indigo-300 font-semibold">Action Required</p>
+    </div>
+    <h3 id="mcQuestion" class="text-lg font-semibold mt-3 leading-snug">Question goes here?</h3>
+    <div id="mcOptions" class="mt-6 space-y-3"></div>
+  </div>
+</div>
+
+<script>
+/* ---------- STATE ---------- */
+let uploadedFile = null;
+let selectedType = null;
+
+/* ---------- FILE UPLOAD ---------- */
+const fileInput = document.getElementById('fileInput');
+const dropzone = document.getElementById('dropzone');
+const filePreview = document.getElementById('filePreview');
+const fileName = document.getElementById('fileName');
+const fileSize = document.getElementById('fileSize');
+const removeFile = document.getElementById('removeFile');
+const processBtn = document.getElementById('processBtn');
+
+function humanSize(b){ if(b<1024) return b+' B'; if(b<1048576) return (b/1024).toFixed(1)+' KB'; return (b/1048576).toFixed(1)+' MB'; }
+
+function handleFile(file){
+  uploadedFile = file;
+  fileName.textContent = file.name;
+  fileSize.textContent = humanSize(file.size);
+  filePreview.classList.remove('hidden');
+  dropzone.classList.add('hidden');
+  updateProcessBtn();
+}
+
+fileInput.addEventListener('change', e => { if(e.target.files[0]) handleFile(e.target.files[0]); });
+
+['dragenter','dragover'].forEach(ev => dropzone.addEventListener(ev, e => { e.preventDefault(); dropzone.classList.add('border-indigo-400/60','bg-indigo-500/10'); }));
+['dragleave','drop'].forEach(ev => dropzone.addEventListener(ev, e => { e.preventDefault(); dropzone.classList.remove('border-indigo-400/60','bg-indigo-500/10'); }));
+dropzone.addEventListener('drop', e => { if(e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]); });
+
+removeFile.addEventListener('click', () => {
+  uploadedFile = null; fileInput.value='';
+  filePreview.classList.add('hidden');
+  dropzone.classList.remove('hidden');
+  updateProcessBtn();
+});
+
+/* ---------- TYPE SELECTION ---------- */
+document.querySelectorAll('.type-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.type-btn').forEach(b => {
+      b.classList.remove('ring-2','ring-indigo-400','bg-white/10');
+      b.querySelector('.check').classList.add('opacity-0');
+    });
+    btn.classList.add('ring-2','ring-indigo-400','bg-white/10');
+    btn.querySelector('.check').classList.remove('opacity-0');
+    selectedType = btn.dataset.type;
+    updateProcessBtn();
+  });
+});
+
+function updateProcessBtn(){ processBtn.disabled = !(uploadedFile && selectedType); }
+
+
+/* ---------- REAL BACKEND INTEGRATION: UPLOAD ---------- */
+processBtn.addEventListener('click', async () => {
+  let typeStr = selectedType === 'sales' ? 'OUTBOUND_SALE' : 'INBOUND_PURCHASE';
+  
+  botMessage(`Scanning <b>${uploadedFile.name}</b> as a <b>${selectedType}</b> invoice... Please wait ⏳`);
+  processBtn.disabled = true;
+  processBtn.innerText = "Processing...";
+
+  let formData = new FormData();
+  formData.append("file", uploadedFile);
+  formData.append("invoice_type", typeStr);
+
+  try {
+      let response = await fetch('/upload', { method: "POST", body: formData });
+      let result = await response.json();
+      if(result.error) {
+          botMessage(`❌ Error: ${result.error}`);
+      } else {
+          botMessage(`✅ ${result.message}`);
+      }
+  } catch(e) {
+      botMessage(`❌ Network error while uploading.`);
+  }
+  
+  processBtn.innerText = "Process with AI Agent";
+  processBtn.disabled = false;
+});
+
+
+/* ---------- CHATBOT UI HELPER FUNCTIONS ---------- */
+const chatBody = document.getElementById('chatBody');
+const chatForm = document.getElementById('chatForm');
+const chatInput = document.getElementById('chatInput');
+
+function scrollBottom(){ chatBody.scrollTop = chatBody.scrollHeight; }
+
+function botMessage(html){
+  const wrap = document.createElement('div');
+  wrap.className = 'flex items-end gap-2.5 animate-slide-up';
+  wrap.innerHTML = `
+    <div class="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-fuchsia-500 flex items-center justify-center shrink-0">
+      <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 4v-4z"/></svg>
+    </div>
+    <div class="max-w-[80%] bg-white/8 border border-white/10 rounded-2xl rounded-bl-md px-4 py-2.5 text-sm leading-relaxed text-slate-200">${html}</div>`;
+  chatBody.appendChild(wrap); scrollBottom();
+}
+
+function userMessage(text){
+  const wrap = document.createElement('div');
+  wrap.className = 'flex items-end gap-2.5 justify-end animate-slide-up';
+  wrap.innerHTML = `
+    <div class="max-w-[80%] bg-gradient-to-br from-indigo-500 to-fuchsia-500 rounded-2xl rounded-br-md px-4 py-2.5 text-sm leading-relaxed text-white shadow-lg shadow-indigo-500/20">${text}</div>
+    <div class="w-8 h-8 rounded-full bg-gradient-to-br from-amber-400 to-pink-500 flex items-center justify-center shrink-0 text-xs font-bold">JD</div>`;
+  chatBody.appendChild(wrap); scrollBottom();
+}
+
+function typingIndicator(){
+  const el = document.createElement('div');
+  el.id = 'typing';
+  el.className = 'flex items-end gap-2.5 animate-fade-in';
+  el.innerHTML = `
+    <div class="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-fuchsia-500 flex items-center justify-center shrink-0">
+      <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 4v-4z"/></svg>
+    </div>
+    <div class="typing bg-white/8 border border-white/10 rounded-2xl rounded-bl-md px-4 py-3"><span></span><span></span><span></span></div>`;
+  chatBody.appendChild(el); scrollBottom();
+}
+function removeTyping(){ const t=document.getElementById('typing'); if(t) t.remove(); }
+
+/* ---------- STATE FOR CAROUSEL ---------- */
+let currentQuestionIndex = 0;
+let carouselQuestions = [];
+let carouselAnswers = {};
+
+/* ---------- MULTIPLE CHOICE POPUP (CAROUSEL WIZARD) ---------- */
+const mcOverlay = document.getElementById('mcOverlay');
+const mcQuestion = document.getElementById('mcQuestion');
+const mcOptions = document.getElementById('mcOptions');
+const mcCard = document.getElementById('mcCard');
+
+function closeMC(){
+  mcCard.style.animation = 'none';
+  mcOverlay.classList.add('hidden');
+  mcOverlay.classList.remove('flex');
+  requestAnimationFrame(()=>{ mcCard.style.animation=''; });
+}
+
+function showQuestionsModal(questionsData) {
+    carouselQuestions = questionsData;
+    currentQuestionIndex = 0;
+    carouselAnswers = {}; // Reset answers
+    
+    mcOverlay.classList.remove('hidden');
+    mcOverlay.classList.add('flex');
+    
+    renderCarouselStep();
+}
+
+function renderCarouselStep() {
+    let q = carouselQuestions[currentQuestionIndex];
+    let total = carouselQuestions.length;
+    
+    // Update Header to show progress (e.g., "Question 1 of 3")
+    document.querySelector('#mcCard p.text-xs').innerHTML = `Question ${currentQuestionIndex + 1} of ${total}`;
+    
+    // Set Question Text
+    mcQuestion.textContent = q.question;
+    
+    // Render Options for this specific question
+    let html = `<div class="space-y-3 mt-5">`;
+    q.options.forEach((opt, oIndex) => {
+        let val = opt.replace(/"/g, '&quot;');
+        let radioId = `carousel_opt_${oIndex}`;
+        let isChecked = carouselAnswers[currentQuestionIndex] === val ? 'checked' : '';
+        
+        html += `
+        <label for="${radioId}" class="flex items-center gap-3 p-3.5 rounded-xl bg-white/5 border border-white/10 hover:border-indigo-400/50 hover:bg-indigo-500/10 cursor-pointer transition">
+            <input type="radio" id="${radioId}" name="carousel_q" value="${val}" ${isChecked} onchange="carouselAnswers[${currentQuestionIndex}] = this.value" class="w-4 h-4 text-indigo-500 bg-slate-800 border-slate-600 focus:ring-indigo-500">
+            <span class="text-sm font-medium text-slate-200">${opt}</span>
+        </label>`;
+    });
+    html += `</div>`;
+    
+    // Render Navigation Buttons (Back, Next, Submit)
+    html += `<div class="flex gap-3 mt-6">`;
+    
+    if (currentQuestionIndex > 0) {
+        html += `<button onclick="prevCarouselStep()" class="flex-1 py-3 rounded-xl font-semibold text-slate-300 bg-white/5 hover:bg-white/10 transition border border-white/10">Back</button>`;
+    }
+    
+    if (currentQuestionIndex < total - 1) {
+        html += `<button onclick="nextCarouselStep()" class="flex-1 py-3 rounded-xl font-semibold text-white bg-indigo-600 hover:bg-indigo-500 transition shadow-lg shadow-indigo-500/20">Next</button>`;
+    } else {
+        html += `<button onclick="submitCarousel()" class="flex-1 py-3 rounded-xl font-semibold text-white bg-gradient-to-r from-emerald-500 to-teal-500 hover:scale-[1.02] transition shadow-lg shadow-emerald-500/20">Submit Answers</button>`;
+    }
+    
+    html += `</div>`;
+    
+    mcOptions.innerHTML = html;
+}
+
+function nextCarouselStep() {
+    if (!carouselAnswers[currentQuestionIndex]) {
+        alert("Please select an option before continuing!");
+        return;
+    }
+    currentQuestionIndex++;
+    renderCarouselStep();
+}
+
+function prevCarouselStep() {
+    currentQuestionIndex--;
+    renderCarouselStep();
+}
+
+function submitCarousel() {
+    if (!carouselAnswers[currentQuestionIndex]) {
+        alert("Please select an option before submitting!");
+        return;
+    }
+    
+    // Create a JSON object for the user's answers
+    let finalAnswerJSON = {
+        "ANSWERS": []
+    };
+    
+    for(let i = 0; i < carouselQuestions.length; i++) {
+        finalAnswerJSON.ANSWERS.push({
+            "question": carouselQuestions[i].question,
+            "selected_option": carouselAnswers[i]
+        });
+    }
+    
+    closeMC();
+    
+    // Display a clean message in the UI
+    userMessage("Submitted answers via the popup.");
+    
+    // Send the actual JSON data to the Python backend / AI Model
+    sendToServer(JSON.stringify(finalAnswerJSON, null, 2));
+}
+
+/* ---------- AI PARSER & REAL SERVER COMMUNICATION ---------- */
+function formatAgentMessage(text) {
+    if (text.includes('"QUESTIONS":')) {
+        try {
+            let start = text.indexOf('{');
+            let end = text.lastIndexOf('}');
+            let jsonStr = text.substring(start, end + 1);
+            let data = JSON.parse(jsonStr);
+            
+            if (data.QUESTIONS && data.QUESTIONS.length > 0) {
+                // Trigger the awesome Carousel modal!
+                showQuestionsModal(data.QUESTIONS);
+                
+                // Keep the chat bubble clean
+                return "I have a few questions for you. Please check the popup on your screen.";
+            }
+        } catch(e) {
+            console.log("Form parsing failed", e);
+        }
+    }
+    // If no JSON was found, just render text normally
+    return text.replace(/\n/g, "<br>");
+}
+
+async function sendToServer(messageText) {
+    typingIndicator();
+    
+    try {
+        let response = await fetch('/chat', {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ message: messageText })
+        });
+        let result = await response.json();
+        removeTyping();
+        
+        let finalHtml = formatAgentMessage(result.reply);
+        botMessage(finalHtml);
+        
+        // Add a beautiful download button if a file was created
+        if (result.file_ready) {
+            let dlHtml = `<div class="mt-4"><a href="/download/${result.file_ready}" target="_blank" class="inline-flex items-center gap-2 bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 border border-emerald-500/30 px-4 py-2.5 rounded-xl text-sm font-semibold transition shadow-lg shadow-emerald-500/10">⬇️ Download Report</a></div>`;
+            botMessage(dlHtml);
+        }
+    } catch(e) {
+        removeTyping();
+        botMessage("❌ Failed to reach the AI agent. Make sure app.py is running!");
+    }
+}
+
+chatForm.addEventListener('submit', e => {
+  e.preventDefault();
+  const text = chatInput.value.trim();
+  if(!text) return;
+  userMessage(text);
+  chatInput.value='';
+  sendToServer(text); 
+});
+
+/* ---------- INITIAL GREETING ---------- */
+window.addEventListener('load', ()=>{
+  setTimeout(()=> botMessage('👋 Hi! I\'m your Invoice Processing Assistant. Upload a document and choose <b>Sales</b> or <b>Purchase</b> on the left, or ask me anything!'), 400);
+});
+</script>
+</body>
+</html>
